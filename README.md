@@ -1,4 +1,4 @@
-# Example VideoHub
+# Kuonji
 
 > 站点名由仓库根目录的 `config.json` 配置（导航栏 / 页脚 / HTML 标题 / `/admin` 全部读它）。
 
