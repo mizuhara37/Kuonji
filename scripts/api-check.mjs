@@ -257,6 +257,23 @@ if (!pendingBvid) {
   check('cleanup: deferred test video removed', afterDeferred.total === totalBefore, `${afterDeferred.total} vs ${totalBefore}`)
 }
 
+/* ---------------- branding / theme config ---------------- */
+console.log('→ 站点配置（config.json → /api/config）')
+const siteConfig = await api('/config')
+check('GET /api/config 公开可读', siteConfig.status === 200 && Boolean(siteConfig.data.item), `HTTP ${siteConfig.status}`)
+check(
+  'config 提供品牌与外观字段',
+  ['siteName', 'brandOwner', 'primaryColor', 'backgroundColor', 'backgroundImage', 'icon', 'footerNote'].every(
+    (key) => key in siteConfig.data.item,
+  ),
+  JSON.stringify(Object.keys(siteConfig.data.item)),
+)
+check(
+  'primaryColor 是合法的十六进制颜色',
+  /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(siteConfig.data.item.primaryColor),
+  String(siteConfig.data.item.primaryColor),
+)
+
 /* ---------------- import（本地补齐 → 上线） ---------------- */
 console.log('→ import 接口（本地补齐后上传）')
 const importCandidates = ['BV1Q541167Qg', 'BV1Deht6rEpZ', 'BV1uv411q7Mv']
@@ -334,6 +351,58 @@ if (!importBvid) {
   await api(`/collections/${importCol.id}`, { method: 'DELETE', expect: 200 })
   await api(`/videos/${importBvid}`, { method: 'DELETE', expect: 200 })
   check('cleanup: imported test video removed', !(await api('/videos')).data.items.some((v) => v.bvid === importBvid))
+}
+
+/* ---------------- import: browser payloads (本机抓取) ---------------- */
+console.log('→ import 的 views 通道（浏览器本机抓到的原始响应）')
+const browserCandidates = ['BV1Q541167Qg', 'BV17Eaw6DEMi', 'BV1Deht6rEpZ', 'BV1uv411q7Mv']
+const browserKnown = new Set((await api('/videos')).data.items.map((v) => v.bvid))
+const browserBvid = browserCandidates.find((b) => !browserKnown.has(b))
+
+if (!browserBvid) {
+  notes.push('跳过 views 通道测试：候选 bvid 都已在库中')
+} else {
+  // 一条手工构造的 B 站 View（含 tags），模拟浏览器 JSONP 抓到的原始数据
+  const view = {
+    bvid: browserBvid,
+    aid: 998877,
+    cid: 112233,
+    title: '本机抓取测试视频',
+    desc: '来自浏览器 JSONP 的原始响应',
+    pic: 'https://i1.hdslb.com/bfs/archive/browser-test.jpg',
+    duration: 66,
+    pubdate: 1700000123,
+    tid: 17,
+    owner: { mid: 7, name: '本机UP', face: '' },
+    stat: { view: 11, danmaku: 1, reply: 2, like: 3, coin: 4, favorite: 5, share: 6 },
+    pages: [{ page: 1, part: 'P1', duration: 66, cid: 112233 }],
+  }
+  const tags = [{ tag_name: '本机标签' }, { tag_name: 'JSONP' }]
+
+  const importedView = await api('/videos/import', {
+    method: 'POST',
+    body: { views: [{ view, tags }] },
+    expect: 200,
+  })
+  check('views 通道创建成功', importedView.data.created === 1, JSON.stringify(importedView.data.results?.[0]?.error || ''))
+  const fromBrowser = (await api(`/videos/${browserBvid}`)).data.item
+  check(
+    'views 通道由服务端归一化（分区 / 标签 / 分 P / 统计）',
+    fromBrowser.category === '单机游戏' &&
+      fromBrowser.categoryParent === '游戏' &&
+      fromBrowser.tags.includes('JSONP') &&
+      fromBrowser.pages[0].cid === 112233 &&
+      fromBrowser.stat.like === 3,
+    JSON.stringify({ cat: fromBrowser.category, tags: fromBrowser.tags, like: fromBrowser.stat.like }),
+  )
+  check('views 通道标记来源为 browser', fromBrowser.metadataSource === 'browser', String(fromBrowser.metadataSource))
+  check(
+    'views 里没有 bvid 的条目被拒绝',
+    (await api('/videos/import', { method: 'POST', body: { views: [{ view: { title: 'x' } }] } })).status === 400,
+  )
+
+  await api(`/videos/${browserBvid}`, { method: 'DELETE', expect: 200 })
+  check('cleanup: views 测试视频已移除', !(await api('/videos')).data.items.some((v) => v.bvid === browserBvid))
 }
 
 /* ---------------- image proxy ---------------- */

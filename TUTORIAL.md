@@ -117,9 +117,9 @@ npm run serve               # = npm run build && node server/index.js
 
 > 端口/监听地址：`PORT`（默认 8787）、`HOST`（默认 127.0.0.1）。
 
-### 改站点名称（`config.json`）
+### 改站点配置（`config.json`）
 
-站点的品牌名只有一个来源：仓库根目录的 **`config.json`**。
+站点的品牌与外观只有一个来源：仓库根目录的 **`config.json`**。
 
 ```json
 {
@@ -127,21 +127,47 @@ npm run serve               # = npm run build && node server/index.js
   "brandProduct": "VideoHub",
   "siteName": "Example VideoHub",
   "tagline": "基于 Material Design 3 构建的视频分享站点",
-  "footerNote": "版权所有 · 视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建",
+  "footerNote": "视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建",
   "repoUrl": "",
-  "deployUrl": ""
+  "deployUrl": "",
+
+  "primaryColor": "#6BBF8A",
+  "backgroundColor": "",
+  "backgroundColorDark": "",
+  "backgroundImage": "",
+  "backgroundOpacity": 0.35,
+  "icon": ""
 }
 ```
 
+| 字段 | 作用 |
+| --- | --- |
+| `brandOwner` / `brandProduct` | 导航栏左上角的两行品牌字（小字 + 大字），也是页脚署名 |
+| `siteName` | 浏览器标题、页脚、`/admin` 标题；省略时自动用 `brandOwner + 空格 + brandProduct` |
+| `tagline` | HTML `description` 用的一句话 |
+| `footerNote` | 页脚右侧那行说明。**留空则整行隐藏**（想彻底去掉版权 / 说明文字就设成 `""`） |
+| `repoUrl` / `deployUrl` | 项目地址 / 线上地址（`deployUrl` 会被 `npm run sync` 当作默认目标） |
+| `primaryColor` | **网站主色**（十六进制）。保持内置的 `#6BBF8A` 时原样使用手工调好的淡绿配色；换成别的颜色时，`on-primary` / `primary-container` / 二级色 / 三级色按 MD3 思路自动派生（对比度、同色系着色、色相旋转），按钮 / chip / 图标 / 链接会一起变 |
+| `backgroundColor` / `backgroundColorDark` | 页面底色（浅色 / 深色主题各一个，留空 = 默认） |
+| `backgroundImage` | **页面背景图**（URL 或本地路径）：铺满视口、固定不滚动，卡片等表面仍保持自己的底色 |
+| `backgroundOpacity` | 背景图不透明度（0–1）。建议 0.15–0.35（浅色）/ 0.4–0.8（深色），太高会压住文字 |
+| `icon` | **网站图标**：图片 URL 或 `data:image/svg+xml,...`，同时用于浏览器标签页与 `/admin` 左上角 |
+
 - 改完 **前端要重新 `npm run build`（或重新部署）**，服务端下次启动生效：
-  Vite 构建时把配置注入前端（导航栏 / 页脚 / HTML 标题），服务端读它做启动横幅与 `GET /api/config`，
-  `/admin` 页面在运行时从 `GET /api/config` 取名称。
-- `siteName` 省略时自动用 `brandOwner + 空格 + brandProduct`。
-- `deployUrl` 会被 `npm run sync` 当作默认线上地址（也可以改用 `LIVE_BASE` 环境变量，放在 `.env` 里）。
+  Vite 构建时把配置注入前端（主题色 / 图标 / 背景 / HTML 标题），服务端读它做启动横幅与
+  `GET /api/config`，`/admin` 在运行时从 `GET /api/config` 取名称、主色与图标。
 - 不想把自己的名字提交进 git？把品牌写进另一个 JSON，然后在 `.env` 里加一行
   `M37_CONFIG=./my-config.local`（`*.local` 已被 gitignore）——`npm run build` / `npm run dev`、
   服务端、以及 `npm run deploy` 都会自动读它；部署时会把这份**生效中的配置**作为 `config.json`
   上传，所以线上也是你自己的名字，而仓库里仍然是示例名称。
+
+一个深色 + 紫色主色 + 背景图的例子：
+
+```json
+{ "primaryColor": "#7C4DFF", "backgroundColor": "#FFF3E0", "backgroundColorDark": "#1A1024",
+  "backgroundImage": "https://example.com/wallpaper.jpg", "backgroundOpacity": 0.25,
+  "icon": "https://example.com/icon.png" }
+```
 
 ## 5. 教程：投稿一个 B 站视频
 
@@ -164,8 +190,29 @@ npm run serve               # = npm run build && node server/index.js
 
 ![投稿后台](docs/images/admin.png)
 
-> **勾上「只存链接，暂不抓取元数据」**：完全不访问 B 站，先把 bvid 存下来（记录标记为 `待补齐`），
-> 之后有人访问该视频时自动补齐 —— 这是机房 IP 被 B 站 412 时的稳妥做法（第 10 节）。
+### 元数据由「本机浏览器」抓取（默认开启）
+
+后台的 **「在本机抓取元数据」** 默认勾选，投稿流程是：
+
+```
+你的浏览器 ──JSONP──► api.bilibili.com        （用你自己的 IP，机房 IP 被 412 也与你无关）
+     │  原始 View 数据
+     └──POST /api/videos/import──► 你的服务器 ──► KV / JSON
+```
+
+- 浏览器用 **JSONP**（`<script>` 不受 CORS 限制）读 B 站的 `/x/web-interface/view`；
+  归一化（`tid` → 分区名、封面、分 P…）仍然在服务端做，所以逻辑只有一份。
+- **服务器完全不访问 B 站**，因此 Vercel 上的 412 拦截不再影响投稿；刷新元数据 / 补齐元数据按钮
+  走的也是同一条路。
+- 本机抓取失败时（插件拦截、断网等）会自动回退到服务器抓一次，并在结果里说明。
+- **唯一拿不到的是「标签」**：带标签的 `/x/web-interface/view/detail` 与 `/x/tag/archive/tags`
+  要求 `Referer: https://www.bilibili.com/`，浏览器不允许伪造 Referer（会 403 → 被浏览器拦掉）。
+  其余信息（标题 / 简介 / 封面 / UP 主 / 时长 / 分 P / 播放点赞等 / 分区）都正常。
+  需要标签时用 `npm run sync -- hydrate --all`（本机 Node 抓，带正确的 Referer）。
+- 不想用本机抓取（例如在手机上用别人的浏览器）就取消勾选，交回服务器抓。
+
+> **勾上「只存链接，暂不抓取元数据」**：连本机也不抓，先把 bvid 存下来（记录标记为 `待补齐`），
+> 之后有人访问该视频时自动补齐 —— 见第 10 节。
 
 ### 视频页长什么样
 
@@ -476,10 +523,18 @@ curl -X POST   http://127.0.0.1:8787/api/collections/reorder -H "X-Admin-Token: 
   -H "Content-Type: application/json" -d '{"ids":["<id2>","<id1>"]}'
 curl -X DELETE http://127.0.0.1:8787/api/collections/<id> -H "X-Admin-Token: 你的口令"
 
-# 写入"已在别处抓好的"完整记录（本地补齐 → 上线用的就是它）
+# 写入"已在别处抓好的"完整记录（`npm run sync` 用的就是它）
 curl -X POST http://127.0.0.1:8787/api/videos/import \
   -H "X-Admin-Token: 你的口令" -H "Content-Type: application/json" \
   -d '{"records":[{"bvid":"BV1QJ411m7fy","title":"示例标题","cover":"https://i0.hdslb.com/…jpg","aid":76271270}]}'
+
+# 写入"浏览器本机抓到的原始 B 站响应"（后台投稿走的就是它；服务端不访问 B 站）
+curl -X POST http://127.0.0.1:8787/api/videos/import \
+  -H "X-Admin-Token: 你的口令" -H "Content-Type: application/json" \
+  -d '{"views":[{"view":{"bvid":"BV1GJ411x7h7","aid":80433022,"title":"…","pic":"…","tid":193,"owner":{…},"stat":{…},"pages":[…]},"tags":null}]}'
+
+# 站点品牌 / 外观（主色、图标、背景），无需口令
+curl http://127.0.0.1:8787/api/config
 ```
 
 ```js

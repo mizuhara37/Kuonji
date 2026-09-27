@@ -16,7 +16,9 @@
         </a>
       </div>
 
-      <div class="footer__copy md-body-small">{{ BRAND_OWNER }} · {{ FOOTER_NOTE }}</div>
+      <div v-if="FOOTER_NOTE" class="footer__copy md-body-small">
+        {{ BRAND_OWNER }} · {{ FOOTER_NOTE }}
+      </div>
     </div>
   </div>
 </template>

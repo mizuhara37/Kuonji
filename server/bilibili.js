@@ -232,8 +232,15 @@ export async function fetchMetaFromHtml(bvid) {
   return normalizeFromView(view, { tags: null, source: 'html' })
 }
 
-/** Build the stored record from a Bilibili `View`-shaped payload. */
-function normalizeFromView(view, { tags = null, source = 'api' } = {}) {
+/**
+ * Build the stored record from a Bilibili `View`-shaped payload.
+ *
+ * Exported because the admin page fetches metadata **in the browser** (JSONP, so
+ * the request uses the visitor's own IP instead of the server's, which B 站
+ * blocks with 412) and then posts the raw payload back — normalisation
+ * (tid → 分区, cover host, pages…) stays in this one place.
+ */
+export function normalizeFromView(view, { tags = null, source = 'api' } = {}) {
   const pages =
     Array.isArray(view.pages) && view.pages.length
       ? view.pages.map((p) => ({

@@ -40,6 +40,7 @@ import AppNavbar from '@/components/AppNavbar.vue'
 import AppBottomNav from '@/components/AppBottomNav.vue'
 import AppFooter from '@/components/AppFooter.vue'
 import GlobalPlayer from '@/components/GlobalPlayer.vue'
+import { siteConfig } from '@/constants'
 import { state } from '@/store/app'
 
 const theme = useTheme()
@@ -49,6 +50,24 @@ const { mobile } = useDisplay()
 watch(
   () => state.theme,
   (value) => theme.change(value),
+  { immediate: true },
+)
+
+/**
+ * With a configured wallpaper the app shell is transparent, so the page
+ * background comes from <body>. Keep that base colour in sync with the active
+ * theme (otherwise the browser's white canvas would wash the image out in dark
+ * mode).
+ */
+watch(
+  () => state.theme,
+  () => {
+    if (!siteConfig.backgroundImage) return
+    // `theme.current` is a ref in Vuetify 3 — accept both shapes defensively
+    const current = theme.current?.value ?? theme.current
+    const colors = current?.colors || {}
+    if (colors.background) document.body.style.backgroundColor = colors.background
+  },
   { immediate: true },
 )
 </script>

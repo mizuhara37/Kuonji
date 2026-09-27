@@ -44,6 +44,28 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* ------------------------------------------------------------------ *
+ * Optional page background (config.json → backgroundImage / backgroundColor)
+ * ------------------------------------------------------------------ */
+.site-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* With a wallpaper the app shell must not paint over it; the surfaces
+   (cards / app bar / drawer) keep their own colours so content stays readable.
+   <body> keeps the theme background colour as the image's base (set from
+   App.vue), which is why it must NOT be forced transparent here. */
+body.has-site-backdrop .v-application,
+body.has-site-backdrop .v-application__wrap {
+  background: transparent !important;
+}
+
 img {
   display: block;
 }

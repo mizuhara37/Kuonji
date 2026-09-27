@@ -1,6 +1,6 @@
 # Kuonji
 
-> 站点名由仓库根目录的 `config.json` 配置（导航栏 / 页脚 / HTML 标题 / `/admin` 全部读它）。
+> 站点名 / 主色 / 图标 / 背景都由仓库根目录的 `config.json` 配置（导航栏 / 页脚 / HTML 标题 / `/admin` 全部读它）。
 
 其实是自己用来分享视频的网站吧，用dsh写的，如果有类似的需求可以试试吧
 
@@ -74,8 +74,10 @@ av80433022
 - **失败有原因**：`视频不存在或已被删除`、`访问被拒绝（可能是番剧、付费或仅限登录的内容）`、
   `请求过于频繁，请稍后再试` 等。
 - 每条记录可：**刷新元数据** / **站点预览** / **在 B 站打开** / **删除**。
-- **勾选「只存链接，暂不抓取元数据」**：完全不访问 B 站，先把 bvid 存下来
-  （用于机房 IP 被 B 站 412 拦截时），之后随时补齐 —— 见下一节。
+- **「在本机抓取元数据」默认开启**：浏览器用自己的 IP 通过 JSONP 读 B 站，再
+  `POST /api/videos/import` 把原始数据交给服务器归一化入库 —— **服务器完全不访问 B 站**，
+  所以线上机房 IP 被 412 也照常投稿（唯一拿不到的是「标签」，B 站要求 Referer 为 bilibili.com）。
+- **勾选「只存链接，暂不抓取元数据」**：连本机也不抓，先把 bvid 存下来，之后随时补齐 —— 见下一节。
 
 ### 元数据待补齐（只存 bvid）
 
@@ -505,9 +507,11 @@ vercel.json          Vercel 构建与路由配置
 
 ## 设计系统
 
-- **淡绿色** MD3 配色：主色 `#6BBF8A`（浅绿）+ 深绿 `on-primary`（按钮为浅绿底深绿字），
-  中性色（`surface-container-*` / `outline-variant` / `background`）也全部改为绿调，
-  所以整页不会再出现紫色。二级色沿用参考项目的 `--ava-soft: #9AC8E2`。
+- **主色 / 图标 / 背景都可配置**（`config.json`）：`primaryColor` 默认 `#6BBF8A` 淡绿，
+  换成任意颜色时会自动派生 `on-primary` / `primary-container` / 二级三级色（对比度 + 色相旋转）；
+  `backgroundImage` + `backgroundOpacity` 是页面壁纸，`backgroundColor(Dark)` 是页面底色，`icon` 是站点图标。
+- **淡绿色** MD3 配色（默认值）：主色 `#6BBF8A`（浅绿）+ 深绿 `on-primary`（按钮为浅绿底深绿字），
+  中性色（`surface-container-*` / `outline-variant` / `background`）也全部改为绿调。二级色沿用参考项目的 `--ava-soft: #9AC8E2`。
 - 亮/暗两套完整颜色角色，明暗切换单一数据源（`store/app.js` → `v-app` → Vuetify）并持久化。
 - MD3 字阶、形状标度、统一动效曲线 `cubic-bezier(0.2,0,0,1)`、涟漪、状态层、骨架屏、Snackbar、FAB。
 - 响应式：`md` 断点以下切抽屉 + 底部导航；视频页网格在移动端重排为
@@ -520,8 +524,8 @@ vercel.json          Vercel 构建与路由配置
 
 ```bash
 npm run serve               # 另开终端（本地服务）
-npm run check:api           # 58 项服务端 API 断言（非破坏性）
-npm run check:interaction   # 60 项 UI 交互断言（非破坏性）
+npm run check:api           # 66 项服务端 API 断言（非破坏性）
+npm run check:interaction   # 67 项 UI 交互断言（非破坏性）
 npm run check:visual        # 截图 + 控制台错误检查
 npm run check:vercel        # 云端部署模拟：函数入口 + 空数据目录 + 只读环境（17 项）
 

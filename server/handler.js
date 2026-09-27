@@ -23,6 +23,7 @@ import {
   fetchVideoMeta,
   isAllowedImageHost,
   isTransientError,
+  normalizeFromView,
   parseInputList,
 } from './bilibili.js'
 import * as store from './store.js'
@@ -389,13 +390,19 @@ async function handleApi(req, res, url) {
     })
   }
 
-  // POST /api/videos/import — 写入「已经在别处（本机家宽 IP）抓好的」完整元数据。
-  // 用于 `npm run sync`：本地补齐 B 站元数据 → 上传到线上 KV，完全不依赖
-  // 线上机房 IP 能否访问 B 站。只接受白名单字段，分类默认沿用线上已有的。
+  // POST /api/videos/import — 写入「已经在别处抓好的」完整元数据，服务端完全不碰 B 站。
+  // 两种来源：
+  //   { records: [...] }                  已经归一化的记录（`npm run sync` 用它）
+  //   { views: [{ view, tags }, ...] }    浏览器（访客自己的 IP）JSONP 抓到的**原始 B 站响应**，
+  //                                       归一化交给服务端，保证 tid→分区等逻辑只有一份
+  // 只接受白名单字段，分类默认沿用线上已有的。
   if (method === 'POST' && bvid === 'import') {
     const body = await readJsonBody(req, 4 * 1024 * 1024)
     const records = Array.isArray(body.records) ? body.records : []
-    if (!records.length) return sendJson(res, 400, { error: 'records 不能为空' })
+    const views = Array.isArray(body.views) ? body.views : []
+    if (!records.length && !views.length) {
+      return sendJson(res, 400, { error: 'records / views 不能为空' })
+    }
 
     const IMPORTABLE = [
       'bvid',
@@ -416,6 +423,25 @@ async function handleApi(req, res, url) {
     ]
 
     const results = []
+
+    // 浏览器抓来的原始 payload：服务端归一化（分区映射、封面、分 P…）
+    for (const entry of views) {
+      const view = entry?.view || entry?.data?.View || entry?.data || null
+      const tags = entry?.tags || entry?.data?.Tags || null
+      if (!view?.bvid) {
+        results.push({ bvid: String(entry?.bvid || ''), ok: false, error: '缺少合法的 view 数据' })
+        continue
+      }
+      try {
+        const meta = normalizeFromView(view, { tags, source: 'browser' })
+        const before = await store.get(meta.bvid)
+        const record = await store.applyMetadata(meta.bvid, meta)
+        results.push({ bvid: meta.bvid, ok: true, created: !before, item: record })
+      } catch (err) {
+        results.push({ bvid: String(view.bvid), ok: false, error: String(err.message || err) })
+      }
+    }
+
     for (const raw of records) {
       const incoming = raw && typeof raw === 'object' ? raw : {}
       const target = extractVideoId(incoming.bvid || '')

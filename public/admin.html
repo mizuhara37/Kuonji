@@ -664,9 +664,19 @@
           <span class="hint" id="status"></span>
         </div>
         <div class="row" style="margin-top: 10px">
+          <label class="check" for="local-fetch">
+            <input type="checkbox" id="local-fetch" checked />
+            <span
+              ><b>在本机抓取元数据</b>（推荐：用你自己的 IP 访问 B 站，抓完再上传到服务器 ——
+              服务器被 B 站 412 拦截时也能照常投稿。标签可能为空，B 站的标签接口要求
+              Referer 为 bilibili.com，浏览器拿不到）</span
+            >
+          </label>
+        </div>
+        <div class="row" style="margin-top: 4px">
           <label class="check" for="defer">
             <input type="checkbox" id="defer" />
-            <span>只存链接，暂不抓取元数据（B 站 412 / 风控时使用，之后可随时补齐）</span>
+            <span>只存链接，暂不抓取元数据（连本机也不抓，之后可随时补齐）</span>
           </label>
         </div>
         <ul class="result-list" id="results"></ul>
@@ -756,6 +766,115 @@
         $('status').innerHTML = busy
           ? `<span class="spinner"></span>${escapeHtml(text)}`
           : escapeHtml(text)
+      }
+
+      /* ---------------- 本机抓取元数据（JSONP） ---------------- */
+
+      /**
+       * B 站会按出口 IP 封服务器（Vercel 等机房返回 412），但**不会封你自己的浏览器**。
+       * 这里用 JSONP（<script> 不受 CORS 限制）在浏览器里直接读 B 站公开接口，
+       * 拿到原始 payload 后 POST 给 /api/videos/import —— 归一化（tid→分区等）仍由服务端做。
+       */
+      const BILI_ERRORS = {
+        '-400': '请求参数错误，请检查 bvid 是否正确',
+        '-403': '访问被拒绝（可能是番剧、付费或仅限登录的内容）',
+        '-404': '视频不存在或已被删除',
+        '-412': '请求被 B 站风控拦截，请稍后再试',
+        '-509': '请求过于频繁，请稍后再试',
+        62002: '稿件不可见',
+        62004: '稿件审核中',
+      }
+
+      let jsonpSeq = 0
+      function jsonp(url, timeoutMs = 15000) {
+        return new Promise((resolve, reject) => {
+          const cb = `m37jsonp_${Date.now()}_${(jsonpSeq += 1)}`
+          const script = document.createElement('script')
+          const timer = setTimeout(
+            () => finish(new Error('本机抓取超时：B 站接口没有响应（可能是网络问题）')),
+            timeoutMs,
+          )
+          function finish(err, data) {
+            clearTimeout(timer)
+            try {
+              delete window[cb]
+            } catch (e) {
+              window[cb] = undefined
+            }
+            script.remove()
+            if (err) reject(err)
+            else resolve(data)
+          }
+          window[cb] = (data) => finish(null, data)
+          script.referrerPolicy = 'no-referrer'
+          script.onerror = () =>
+            finish(new Error('本机无法访问 B 站接口（被网络或浏览器插件拦截？）'))
+          script.src = `${url}${url.includes('?') ? '&' : '?'}jsonp=jsonp&callback=${cb}`
+          document.head.appendChild(script)
+        })
+      }
+
+      function assertOk(payload) {
+        if (!payload || payload.code !== 0) {
+          const code = String(payload && payload.code)
+          throw new Error(BILI_ERRORS[code] || (payload && payload.message) || 'B 站返回了错误')
+        }
+        return payload.data
+      }
+
+      /**
+       * 本机抓一个视频的原始 View（+Tags）。
+       *
+       * 只能用 `/x/web-interface/view`：带 Tags 的 `/view/detail` 与 `/x/tag/archive/tags`
+       * 要求 `Referer: https://www.bilibili.com/`，浏览器不允许我们伪造 Referer
+       * （会返回 403 + text/html，被 Chromium 的 ORB 直接拦掉），所以 **标签可能抓不到**；
+       * 其余（标题 / 简介 / 封面 / UP 主 / 分 P / 统计 / 分区）都齐全。
+       * 需要标签时：`npm run sync -- hydrate --all`（本机 Node，带正确的 Referer）。
+       */
+      async function fetchViewInBrowser(bvid) {
+        const query = `bvid=${encodeURIComponent(bvid)}`
+        try {
+          const detail = assertOk(
+            await jsonp(`https://api.bilibili.com/x/web-interface/view/detail?${query}`, 8000),
+          )
+          if (detail && detail.View) return { view: detail.View, tags: detail.Tags || null }
+        } catch (err) {
+          /* 绝大多数浏览器都会走到这里（Referer 限制），静默降级 */
+        }
+        const data = assertOk(
+          await jsonp(`https://api.bilibili.com/x/web-interface/view?${query}`),
+        )
+        if (!data || !data.bvid) throw new Error('B 站没有返回视频信息')
+        return { view: data, tags: null }
+      }
+
+      /** 本机抓 → 上传给服务器（服务端不访问 B 站）。 */
+      async function importFromBrowser(bvid) {
+        const payload = await fetchViewInBrowser(bvid)
+        const res = await api('/videos/import', {
+          method: 'POST',
+          body: JSON.stringify({ views: [payload] }),
+        })
+        const result = (res.results || [])[0]
+        if (!result || !result.ok) throw new Error((result && result.error) || '上传元数据失败')
+        return result
+      }
+
+      function inputToBvid(input) {
+        const match = String(input || '').match(/BV[0-9A-Za-z]{10}/)
+        return match ? match[0] : ''
+      }
+
+      /** Split the textarea into individual inputs (one per line/comma/space). */
+      function splitInputs(text) {
+        return [
+          ...new Set(
+            String(text || '')
+              .split(/[\s,，;；]+/)
+              .map((s) => s.trim())
+              .filter(Boolean),
+          ),
+        ]
       }
 
       /** fetch wrapper that attaches the admin token to writes. */
@@ -1067,13 +1186,82 @@
         state.busy = true
         $('submit').disabled = true
         const defer = $('defer').checked
-        setStatus(defer ? '正在保存 bvid（跳过元数据抓取）…' : '正在从 B 站获取元数据…', true)
+        const local = $('local-fetch').checked && !defer
 
+        // 「只存链接」：完全不抓
+        if (defer) {
+          setStatus('正在保存 bvid（跳过元数据抓取）…', true)
+          try {
+            const data = await api('/videos', {
+              method: 'POST',
+              body: JSON.stringify({ input, deferMetadata: true }),
+            })
+            renderResults(data.results || [])
+            setStatus(`完成：新增 ${data.added}，刷新 ${data.refreshed}，待补齐 ${data.deferred}，失败 ${data.failed}`)
+            if (data.added || data.refreshed) $('input').value = ''
+            await loadLibrary()
+            await loadCollections()
+          } catch (err) {
+            setStatus(`请求失败：${err.message}`)
+          } finally {
+            state.busy = false
+            $('submit').disabled = false
+          }
+          return
+        }
+
+        // 本机抓取：浏览器（你的 IP）→ /api/videos/import
+        if (local) {
+          const inputs = splitInputs(input)
+          const results = []
+          let added = 0
+          let refreshed = 0
+          let failed = 0
+          for (const [index, one] of inputs.entries()) {
+            setStatus(`本机抓取中 ${index + 1}/${inputs.length}：${one}`, true)
+            const bvid = inputToBvid(one)
+            if (!bvid) {
+              failed += 1
+              results.push({ input: one, ok: false, error: '无法识别视频 ID，请输入 BV 号或视频链接' })
+              continue
+            }
+            try {
+              const result = await importFromBrowser(bvid)
+              if (result.created) added += 1
+              else refreshed += 1
+              results.push({ input: one, ok: true, created: result.created, item: result.item })
+            } catch (err) {
+              // 本机抓不到（插件拦截 / 网络 / 风控）时回退给服务器试一次
+              try {
+                const fallback = await api('/videos', {
+                  method: 'POST',
+                  body: JSON.stringify({ input: bvid }),
+                })
+                const r = (fallback.results || [])[0]
+                if (!r || !r.ok) throw new Error((r && r.error) || '服务器抓取也失败')
+                if (r.created) added += 1
+                else refreshed += 1
+                results.push({ input: one, ok: true, created: r.created, item: r.item, warning: `本机抓取失败（${err.message}），已由服务器抓取` })
+              } catch (err2) {
+                failed += 1
+                results.push({ input: one, ok: false, error: err2.message })
+              }
+            }
+          }
+          renderResults(results)
+          setStatus(`完成：新增 ${added}，刷新 ${refreshed}，失败 ${failed}（元数据由本机抓取）`)
+          if (added || refreshed) $('input').value = ''
+          await loadLibrary()
+          await loadCollections()
+          state.busy = false
+          $('submit').disabled = false
+          return
+        }
+
+        // 交给服务器抓（旧行为）
+        setStatus('正在从 B 站获取元数据（服务器端）…', true)
         try {
-          const data = await api('/videos', {
-            method: 'POST',
-            body: JSON.stringify({ input, deferMetadata: defer }),
-          })
+          const data = await api('/videos', { method: 'POST', body: JSON.stringify({ input }) })
           if (data.error && !data.results) {
             $('results').innerHTML = `<li class="result err"><span>✘</span><span>${escapeHtml(
               data.error,
@@ -1204,8 +1392,13 @@
           button.disabled = true
           button.textContent = '刷新中…'
           try {
-            await api(`/videos/${bvid}/refresh`, { method: 'POST' })
-            setStatus('元数据已刷新')
+            if ($('local-fetch').checked) {
+              await importFromBrowser(bvid)
+              setStatus('元数据已刷新（本机抓取）')
+            } else {
+              await api(`/videos/${bvid}/refresh`, { method: 'POST' })
+              setStatus('元数据已刷新（服务器抓取）')
+            }
           } catch (err) {
             setStatus(`刷新失败：${err.message}`)
           }
@@ -1216,10 +1409,15 @@
           button.disabled = true
           button.textContent = '补齐中…'
           try {
-            const res = await api(`/videos/${bvid}/hydrate`, { method: 'POST' })
-            if (res.hydrated) setStatus('已补齐封面与简介')
-            else if (res.throttled) setStatus('刚刚已经尝试过，请过 20 秒再试')
-            else setStatus(`补齐失败：${res.error || 'B 站没有放行'}`)
+            if ($('local-fetch').checked) {
+              await importFromBrowser(bvid)
+              setStatus('已补齐封面与简介（本机抓取）')
+            } else {
+              const res = await api(`/videos/${bvid}/hydrate`, { method: 'POST' })
+              if (res.hydrated) setStatus('已补齐封面与简介')
+              else if (res.throttled) setStatus('刚刚已经尝试过，请过 20 秒再试')
+              else setStatus(`补齐失败：${res.error || 'B 站没有放行'}`)
+            }
           } catch (err) {
             setStatus(`补齐失败：${err.message}`)
           }
@@ -1262,6 +1460,73 @@
 
       /* ---------------- branding（来自 config.json，见 /api/config） ---------------- */
 
+      /* 颜色小工具（与 src/utils/theme.js 同思路，这里保持零依赖内联） */
+      function hexToRgb(hex) {
+        const v = String(hex || '').replace('#', '')
+        const full = v.length === 3 ? v.replace(/./g, (c) => c + c) : v
+        return {
+          r: parseInt(full.slice(0, 2), 16) || 0,
+          g: parseInt(full.slice(2, 4), 16) || 0,
+          b: parseInt(full.slice(4, 6), 16) || 0,
+        }
+      }
+      function rgbHex({ r, g, b }) {
+        const p = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')
+        return `#${p(r)}${p(g)}${p(b)}`
+      }
+      function mixHex(a, b, w) {
+        const x = hexToRgb(a)
+        const y = hexToRgb(b)
+        return rgbHex({
+          r: x.r + (y.r - x.r) * w,
+          g: x.g + (y.g - x.g) * w,
+          b: x.b + (y.b - x.b) * w,
+        })
+      }
+      function luminance(hex) {
+        const { r, g, b } = hexToRgb(hex)
+        const ch = (v) => {
+          const c = v / 255
+          return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+        }
+        return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+      }
+
+      function applyTheme(item) {
+        const primary = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(item.primaryColor || ''))
+          ? item.primaryColor
+          : '#6BBF8A'
+        const onPrimary = luminance(primary) > 0.45 ? mixHex(primary, '#000000', 0.84) : '#ffffff'
+        const root = document.documentElement.style
+        root.setProperty('--primary', primary)
+        root.setProperty('--primary-dark', mixHex(primary, '#000000', 0.3))
+        root.setProperty('--primary-container', mixHex(primary, '#ffffff', 0.78))
+        root.setProperty('--on-primary-container', mixHex(primary, '#000000', 0.82))
+        root.setProperty('--on-primary', onPrimary)
+        if (item.backgroundColor) root.setProperty('--background', item.backgroundColor)
+      }
+
+      function applyIcon(item) {
+        if (!item.icon) return
+        let link = document.querySelector('link[rel~="icon"]')
+        if (!link) {
+          link = document.createElement('link')
+          link.rel = 'icon'
+          document.head.appendChild(link)
+        }
+        link.href = item.icon
+        const mark = document.querySelector('.brand svg')
+        if (mark) {
+          const img = document.createElement('img')
+          img.src = item.icon
+          img.alt = ''
+          img.width = 28
+          img.height = 28
+          img.style.borderRadius = '8px'
+          mark.replaceWith(img)
+        }
+      }
+
       async function applyBranding() {
         try {
           const res = await fetch('/api/config')
@@ -1274,6 +1539,8 @@
             $('foot-brand').textContent = item.siteName
             document.title = `投稿后台 · ${item.siteName}`
           }
+          applyTheme(item)
+          applyIcon(item)
         } catch (err) {
           /* 静态打开（file://）或接口不可用时保持默认名称 */
         }

@@ -477,6 +477,66 @@ if (!pendingBvid) {
   )
 }
 
+/* ---------------- 9. 本机抓取投稿 + 外观配置 ---------------- */
+console.log('→ 本机（浏览器）抓取元数据投稿')
+const browserCandidates = ['BV1uv411q7Mv', 'BV17Eaw6DEMi', 'BV1Deht6rEpZ', 'BV1xx411c7mD']
+const liveBvids = new Set((await api.videos()).items.map((v) => v.bvid))
+const localBvid = browserCandidates.find((b) => !liveBvids.has(b))
+
+if (!localBvid) {
+  notes.push('跳过「本机抓取投稿」断言：候选 bvid 都已在库中')
+} else {
+  await page.goto(`${BASE}/admin`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1600)
+
+  // 把服务器端的抓取路径打断：任何成功都只能来自浏览器本机抓取
+  let serverAttempts = 0
+  await page.route('**/api/videos', async (route) => {
+    if (route.request().method() === 'POST') {
+      serverAttempts += 1
+      return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"测试：服务器端抓取被禁用"}' })
+    }
+    return route.continue()
+  })
+
+  check('后台默认勾选「在本机抓取元数据」', await page.locator('#local-fetch').isChecked())
+  await page.locator('#input').fill(localBvid)
+  await page.locator('#submit').click()
+  await page.waitForSelector('.result', { timeout: 60000 })
+  await page.waitForTimeout(1500)
+  check('本机抓取投稿成功（服务器抓取不可用也不影响）', (await page.locator('.result').first().innerText()).includes('已添加'), (await page.locator('.result').first().innerText()).replace(/\s+/g, ' ').slice(0, 90))
+  check('完全没有回退到服务器抓取', serverAttempts === 0, `serverAttempts=${serverAttempts}`)
+
+  const imported = (await api.videos()).items.find((v) => v.bvid === localBvid)
+  check(
+    '记录由浏览器抓取并上传（source=browser，字段完整）',
+    imported?.metadataSource === 'browser' &&
+      imported?.metadataState === 'complete' &&
+      Boolean(imported?.cover && imported?.owner?.mid && imported?.aid),
+    JSON.stringify({ source: imported?.metadataSource, state: imported?.metadataState, cover: Boolean(imported?.cover) }),
+  )
+  await page.screenshot({ path: 'shots/27-admin-local-fetch.png' })
+  await page.unroute('**/api/videos')
+
+  await fetch(`${BASE}/api/videos/${localBvid}`, { method: 'DELETE', headers: TOKEN ? { 'X-Admin-Token': TOKEN } : {} })
+  check('cleanup: 本机抓取测试视频已移除', !(await api.videos()).items.some((v) => v.bvid === localBvid))
+}
+
+console.log('→ 外观配置（config.json）')
+await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
+await page.waitForTimeout(2200)
+const appearance = await page.evaluate(() => ({
+  ava: getComputedStyle(document.documentElement).getPropertyValue('--ava').trim().toLowerCase(),
+  footer: document.querySelector('.footer__copy')?.innerText || '',
+}))
+const config = await (await fetch(`${BASE}/api/config`)).json()
+check(
+  '主色进入页面（--ava 跟随 config.primaryColor）',
+  appearance.ava === String(config.item.primaryColor).toLowerCase(),
+  `${appearance.ava} vs ${config.item.primaryColor}`,
+)
+check('页脚文案来自 config.footerNote（不含硬编码版权）', !/版权所有/.test(appearance.footer) || /版权所有/.test(config.item.footerNote), appearance.footer)
+
 await browser.close()
 
 console.log(`\n${passed} passed, ${failed} failed`)

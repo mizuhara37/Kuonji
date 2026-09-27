@@ -9,9 +9,15 @@ const FALLBACK = {
   brandProduct: 'VideoHub',
   siteName: 'Example VideoHub',
   tagline: '基于 Material Design 3 构建的视频分享站点',
-  footerNote: '版权所有 · 视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建',
+  footerNote: '视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建',
   repoUrl: '',
   deployUrl: '',
+  primaryColor: '#6BBF8A',
+  backgroundColor: '',
+  backgroundColorDark: '',
+  backgroundImage: '',
+  backgroundOpacity: 0.35,
+  icon: '',
 }
 
 export const siteConfig = { ...FALLBACK, ...injected }

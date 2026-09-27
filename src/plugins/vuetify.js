@@ -13,6 +13,8 @@ import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import { siteConfig } from '@/constants'
+import { accentRoles, isDefaultPrimary, normalizeHex, primaryRoles, readableOn } from '@/utils/theme'
 
 const light = {
   dark: false,
@@ -112,6 +114,34 @@ const dark = {
   },
 }
 
+/**
+ * Apply `primaryColor` / `backgroundColor` from config.json.
+ *
+ * With the built-in green nothing changes (the hand-tuned palette above is kept
+ * verbatim). Any other primary derives its roles, plus two accent hues and a
+ * matching on-background, so the whole site follows the configured colour.
+ */
+function themeWithConfig(base, dark) {
+  const primary = normalizeHex(siteConfig.primaryColor || '#6BBF8A')
+  const colors = { ...base.colors }
+
+  if (!isDefaultPrimary(primary)) {
+    Object.assign(colors, primaryRoles(primary, dark), accentRoles(primary, dark))
+  }
+
+  const background = dark
+    ? siteConfig.backgroundColorDark || ''
+    : siteConfig.backgroundColor || ''
+  if (background) {
+    const bg = normalizeHex(background, colors.background)
+    colors.background = bg
+    colors['on-background'] = readableOn(bg, { darkTint: 0.88 })
+    colors['surface-dim'] = bg
+  }
+
+  return { ...base, colors }
+}
+
 export default createVuetify({
   components,
   directives,
@@ -122,7 +152,7 @@ export default createVuetify({
   },
   theme: {
     defaultTheme: 'light',
-    themes: { light, dark },
+    themes: { light: themeWithConfig(light, false), dark: themeWithConfig(dark, true) },
   },
   defaults: {
     VBtn: { rounded: 'lg' },
