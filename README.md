@@ -4,17 +4,43 @@
 
 其实是自己用来分享视频的网站吧，用dsh写的，如果有类似的需求可以试试吧
 
-一个用 **Material Design 3** 设计的视频站点，界面结构仿照
-[KotokawaAkira/VideoStation](https://github.com/KotokawaAkira/VideoStation)，
-内容完全来自哔哩哔哩：
+## 它是什么
 
-- 投稿在 **Node.js 后台页面**（`/admin`）完成——输入 B 站视频的 **bvid** 即可；
-- 视频画面由 **B 站官方内嵌播放器**播放（带原生清晰度、倍速、弹幕）；
-- 标题、**简介**、分区、标签、时长、**UP 主信息**与点赞投币收藏等数据全部来自 B 站；
-- 评论区默认显示**真实的 B 站评论**（热门 / 最新、楼中楼、点赞数，只读）；
-- 可以**自定义分类**整理视频，主页会按分类分区展示；
-- 切换页面时**正在播放的视频会进入小窗**继续播放；
-- 站点前端是只读的：没有账号系统，也没有投稿入口。
+一个用 **Material Design 3** 做的视频站点，界面结构仿照
+[KotokawaAkira/VideoStation](https://github.com/KotokawaAkira/VideoStation)，
+内容全部来自哔哩哔哩：**投稿就是填一个 bvid**，播放走 B 站官方内嵌播放器，
+简介 / UP 主 / 分区 / 统计 / 评论都从 B 站读。没有账号系统，访客只能看。
+
+- **技术栈**：Vue 3 + Vite + Vuetify 3（MD3）前端；零依赖 Node（`node:http`）后端，
+  同一份后端代码既能本地跑，也能当作 Vercel Serverless 函数；
+- **投稿后台**（`/admin`）：粘贴 bvid / 视频链接 / av 号即可，可批量、可去重；
+  元数据由**你的浏览器**抓取后再上传（服务器不访问 B 站，机房 IP 被 412 也不影响）；
+- **播放**：B 站官方内嵌播放器，原生清晰度 / 倍速 / 弹幕；多分 P 有「视频选集」；
+- **小窗播放**：切换页面时正在播放的视频不中断，缩到右下角继续放；
+- **B 站评论**：默认展示真实评论（热门 / 最新、楼中楼、只读），另有一份只存在本机的本地评论；
+- **分类整理**：自定义分类（与 B 站分区无关），主页按分类分区展示；
+- **可配置**：站点名称 / 主色 / 图标 / 背景图都写在 `config.json`；
+- **存储**：本地是 JSON 文件，线上用 Upstash Redis / Vercel KV，写操作由 `ADMIN_TOKEN` 保护。
+
+> 安装、投稿、分类、部署、元数据兜底、API 示例与验证脚本：见 **[TUTORIAL.md](TUTORIAL.md)**。
+
+---
+
+## 界面截图
+
+![首页](docs/images/home.png)
+
+*首页：顶部分类 chip，下面每个分类一个区块；封面、播放量、UP 主、分区都来自 B 站，右上角可切换亮 / 暗主题。*
+
+| 视频页 | 投稿后台 |
+| --- | --- |
+| ![视频页](docs/images/video-page.png) | ![投稿后台](docs/images/admin.png) |
+| 简介、点赞投币收藏统计、相关推荐，以及**真实的 B 站评论**（热门 / 最新、楼中楼） | 粘贴 bvid 投稿、分类管理，每条可刷新 / 补齐元数据；带「待补齐」标记与占位封面 |
+
+| 小窗播放 | 待补齐（只存了 bvid） |
+| --- | --- |
+| ![小窗播放](docs/images/mini-player.png) | ![待补齐](docs/images/pending-metadata.png) |
+| 切到别的页面时播放不中断，自动缩成右下角小窗，可「回到视频页」或「关闭小窗」 | B 站返回 412 时先只存 bvid，之后自动 / 手动补齐，期间不会伪造 UP 主与统计 |
 
 ---
 
@@ -354,10 +380,12 @@ npm run kv -- clear       # 清空线上库（之后线上退回 server/seed.js 
 曾经常出问题的是**按 bvid 新增视频 / 刷新元数据**：B 站会按出口 IP 封
 `/x/web-interface/*` 这一组接口，返回 `412 request was banned`。
 
-**现在已经不会因此丢投稿了**（见上一节）：
-- 抓取链路增加了**视频页 HTML** 兜底（走 `www.bilibili.com`，不是被封的 API 域名），
-  实测能拿到标题 / 简介 / 封面 / UP 主 / 分 P / 播放数据；
-- 仍然失败时只存 bvid（`metadataState: "pending"`），**有人访问该视频时自动重试**
+**现在投稿完全不受它影响**：
+
+- **元数据由你的浏览器抓取**（JSONP，用你自己的 IP），抓到后 POST 给 `/api/videos/import` 入库 ——
+  服务器根本不访问 B 站，所以机房 IP 被 412 也无所谓；`/admin` 的「刷新 / 补齐元数据」走同一条路。
+- 服务端自己抓的链路仍保留作兜底：`/view/detail` → `/view` → **视频页 HTML**（本机家宽实测可用，线上机房仍 412）。
+- 都失败时只存 bvid（`metadataState: "pending"`）：**有人访问该视频时自动重试**
   （`POST /api/videos/:bvid/hydrate` + 评论接口顺带补齐），后台也有「补齐元数据」按钮。
 
 **它是间歇性的**：同一个部署，我实测到过成功、也实测到过连续 412（隔一段时间会恢复）。
@@ -375,9 +403,8 @@ npm run kv -- clear       # 清空线上库（之后线上退回 server/seed.js 
 后来把那套头去掉了）。`hkg1` 香港区域会被拦；换其他海外区域大概率一样，因为都是机房 IP。
 拦截是**间歇性**的：`npm run check:deployed` 里"投稿/刷新"这一项实测通过过，也实测到过连续 412。
 
-**更可靠的做法：让本地后台直连线上 KV。**
-
-本地是国内家宽 IP，不会被封；把 KV 变量给本地后台，它就能抓元数据并**直接写进线上库**，
+**批量 / 定时补齐的两种做法。** 一是在本机跑 `npm run sync`（本机抓元数据 → 上传线上，见上方小节）；
+二是让本地后台直连线上 KV —— 本地是国内家宽 IP，把 KV 变量给它，它抓完就直接写进线上库，
 Vercel 站点立刻可见：
 
 ```powershell
@@ -402,175 +429,13 @@ Upstash 的 REST Token 与 Vercel Token 都属于凭据。如果它们曾经出�
 
 ### 需要注意的坑
 
-- **B 站 API 的地域性**：函数默认在海外节点，`api.bilibili.com` 对非国内 IP 可能限流或风控
-  （返回 `-412` 之类）。已把区域设为 `hkg1`（香港）并实测评论接口可用；若投稿仍经常失败，
-  把 API 部署到国内主机、或本地投稿后只把 Redis 数据给 Vercel 读，会更稳。
-- **函数执行时间**：每次投稿都要请求 B 站（数百毫秒）+ 350ms 间隔，批量条数多容易撞上时长上限
-  （已设 `maxDuration: 60`，免费版上限更低）。批量建议一次不超过 10 条。
+- **B 站接口的地域性**：投稿的元数据已经由浏览器抓取，服务器只剩**评论**与**图床代理**两个上游请求。
+  函数默认在海外节点，已把区域设为 `hkg1`（香港），实测评论接口与图床都可用；
+  若评论也常被限流，把评论代理挪到国内主机或加长缓存会更稳。
+- **函数执行时间**：投稿时服务器只收一个几百 KB 的元数据 payload（几乎瞬时），批量上限主要取决于
+  浏览器逐条抓取的速度；评论 / 图床请求已设 `Cache-Control` 与 60 秒内存缓存（`maxDuration: 60`）。
 - **图片代理**：封面 / 头像走 `/api/image`，会消耗函数调用；已加 `Cache-Control: max-age=86400`。
 - Vercel 免费版仅限非商业用途，请自行确认合规。
-
----
-
-## 服务端 API
-
-`server/handler.js` 是共用的请求处理器：本地由 `server/index.js` 用 `node:http` 起服务，
-Vercel 由 `api/index.js` 包一层函数。
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/health` | 状态、库内数量、存储驱动、`authRequired`、`canWrite` |
-| GET | `/api/videos` | 列表；`?keywords=` `?category=` `?collection=` `?sort=added\|play\|pubdate` `?ids=` |
-| GET | `/api/videos/:bvid` | 单条记录（含 `collectionName`） |
-| POST | `/api/videos` | 投稿：`{ "input": "BV号/链接/av号", "deferMetadata": false }`，支持多条；`deferMetadata: true` = 只存链接 |
-| PATCH | `/api/videos/:bvid` | 归类：`{ "collectionId": "..." }`（空串 = 未分类） |
-| POST | `/api/videos/:bvid/refresh` | 重新拉取元数据（保留分类） |
-| POST | `/api/videos/:bvid/hydrate` | **补齐待补齐的元数据**（访客可调用、无需口令、每 bvid 限流 20 秒） |
-| POST | `/api/videos/import` | **写入本地/别处抓好的完整记录**（`{ records: [...] }`，需口令；分类默认沿用线上，`withCollection: true` 才覆盖） |
-| DELETE | `/api/videos/:bvid` | 从库中移除 |
-| GET | `/api/collections` | 分类列表（含每个分类的视频数） |
-| POST | `/api/collections` | 新建分类 `{ name }` |
-| PATCH | `/api/collections/:id` | 重命名 `{ name }` |
-| DELETE | `/api/collections/:id` | 删除分类（视频保留） |
-| POST | `/api/collections/reorder` | 排序 `{ ids: [...] }` |
-| GET | `/api/comments/:bvid` | 该视频的 **B 站评论**（`?mode=hot\|time`、`?next=<cursor>` 翻页） |
-| GET | `/api/image?url=` | B 站图床代理（域名白名单） |
-| GET | `/admin` | 投稿后台页面 |
-
-**分区名称**：B 站匿名接口不再返回 `tname`（恒为空串），但 `tid` 仍有值，
-所以服务端内置了 tid → 分区名映射（`server/bilibili.js`），并归纳出一级分区；
-表里没有的新分区归入「其他」。视频页会同时显示一级分区与具体分区（如 `游戏 · 单机游戏`）。
-
----
-
-## 数据与持久化
-
-| 数据 | 位置 | 说明 |
-| --- | --- | --- |
-| 视频库 | 本地：`server/data/videos.json`；Vercel：Upstash Redis / Vercel KV | 所有访问者共享，由 `/admin` 维护 |
-| 分类 | 本地：`server/data/collections.json`；Vercel：同上 | 独立文件，视频记录里的 `collectionId` 引用它 |
-| 我的收藏 | 浏览器 `localStorage`（`m37_favorites`，存 bvid） | 无需账号；库中已删除的视频会自动清掉 |
-| 本站评论 | 浏览器 `localStorage`（`m37_comments`） | 仅本地可见 |
-| 匿名昵称 | 浏览器 `localStorage`（`m37_identity`） | 例如「深夜观众42」，用于署名的评论 |
-| 主题（亮/暗） | 浏览器 `localStorage`（`m37_theme`） | |
-
-两个 JSON 文件都可以**手写**：读取时会补齐缺失字段（`pages` / `stat` / `owner` / `addedAt` 等），
-所以只写 `{ "bvid": "BV..." }` 也不会让页面崩，再用后台的「刷新元数据」或「补齐元数据」补全即可。
-只写 `bvid` 的记录会被自动判定为 `metadataState: "pending"`（待补齐），
-抓取成功后写回 `metadataState: "complete"`、`metadataSource: "api" | "html"`、
-`metadataError`（上次失败原因）与 `metadataCheckedAt`（上次尝试时间）。
-
----
-
-## 目录结构
-
-```
-server/
-├── handler.js     共用请求处理器：静态站点 + /admin + API + 图床代理 + 鉴权 + 评论缓存
-├── index.js       本地 Node 服务（listen + 启动信息）
-├── env.js         零依赖 .env 加载器（必须最先导入）
-├── backend.js     存储驱动：JSON 文件 / Upstash Redis REST
-├── store.js       视频库与分类的读写、记录归一化、待补齐（pending）状态
-├── bilibili.js    B 站 Web API 客户端 + 视频页 HTML 兜底、bvid 解析、tid→分区映射、评论、错误文案
-└── data/          videos.json / collections.json（运行时生成，已 gitignore）
-api/
-└── index.js       Vercel 函数入口
-public/
-└── admin.html     投稿后台（纯 HTML/CSS/JS，构建时复制到 dist/）
-src/
-├── api/index.js   前端 API 客户端
-├── store/
-│   ├── player.js  全局播放器状态（停靠槽位 / 小窗 / 停靠高度）
-│   ├── app.js     主题、Snackbar、匿名昵称、本地收藏
-│   ├── ui.js      跨组件 UI 标记（底部评论条的占位）
-│   └── comments.js 本地评论
-├── components/
-│   ├── GlobalPlayer.vue     只挂载一次的播放器宿主（停靠 / 小窗）
-│   ├── BilibiliPlayer.vue   官方内嵌播放器 + 加载态 + 失败兜底 + 宽屏
-│   ├── CommentSection.vue   评论容器（B 站评论 / 本站评论 两个标签页）
-│   ├── BilibiliComments.vue B 站真实评论（热门/最新、楼中楼、只读）
-│   ├── LocalComments.vue    本地评论（可发、可删、可点赞）
-│   ├── VideoCard.vue / AppNavbar.vue / AppBottomNav.vue / AppFooter.vue …
-├── views/         HomeView / SearchView / VideoView / FavoritesView / NotFoundView
-├── utils/format.js
-└── styles/global.css
-scripts/
-├── sync-metadata.mjs   本地补齐 → 上传线上（npm run sync）
-├── vercel-deploy.mjs   REST API 部署（token 不走 CLI 的 user profile）
-├── kv-tool.mjs         Upstash KV 巡检 / 整库覆盖 / 清空
-└── check-*.mjs         各套验证脚本
-.env / .env.example  本地配置（口令、KV、端口）
-vercel.json          Vercel 构建与路由配置
-```
-
----
-
-## 设计系统
-
-- **主色 / 图标 / 背景都可配置**（`config.json`）：`primaryColor` 默认 `#6BBF8A` 淡绿，
-  换成任意颜色时会自动派生 `on-primary` / `primary-container` / 二级三级色（对比度 + 色相旋转）；
-  `backgroundImage` + `backgroundOpacity` 是页面壁纸，`backgroundColor(Dark)` 是页面底色，`icon` 是站点图标。
-- **淡绿色** MD3 配色（默认值）：主色 `#6BBF8A`（浅绿）+ 深绿 `on-primary`（按钮为浅绿底深绿字），
-  中性色（`surface-container-*` / `outline-variant` / `background`）也全部改为绿调。二级色沿用参考项目的 `--ava-soft: #9AC8E2`。
-- 亮/暗两套完整颜色角色，明暗切换单一数据源（`store/app.js` → `v-app` → Vuetify）并持久化。
-- MD3 字阶、形状标度、统一动效曲线 `cubic-bezier(0.2,0,0,1)`、涟漪、状态层、骨架屏、Snackbar、FAB。
-- 响应式：`md` 断点以下切抽屉 + 底部导航；视频页网格在移动端重排为
-  `播放器 → 选集/推荐 → 评论`；小窗在移动端贴着底部导航上方。
-- 图标用 `@mdi/font`，字体用系统字体栈，后台页面零依赖，**不请求任何外部 CDN**。
-
----
-
-## 验证
-
-```bash
-npm run serve               # 另开终端（本地服务）
-npm run check:api           # 66 项服务端 API 断言（非破坏性）
-npm run check:interaction   # 67 项 UI 交互断言（非破坏性）
-npm run check:visual        # 截图 + 控制台错误检查
-npm run check:vercel        # 云端部署模拟：函数入口 + 空数据目录 + 只读环境（17 项）
-
-# 验证已部署的实例（Vercel 等）
-npm run check:deployed -- https://your-app.vercel.app
-
-# 线上元数据补齐（不是测试，是运维工具：list → hydrate → push）
-npm run sync -- list
-```
-
-这些脚本都用**系统自带的 Edge**（`playwright-core`，无需下载浏览器），
-并且**都不会删除你已有的视频**：临时新增的视频 / 分类都会在结束时清理，
-测试用到的视频如果本来有分类，结束时会**恢复成原来的分类**。
-
-`check:vercel` 是本项目最有价值的一个：它用 `api/index.js` 的默认导出（Vercel 的真实调用方式）
-起一个 `node:http` 服务，`VERCEL=1` + 空数据目录，于是能在本地就复现"线上只读部署"的全部行为——
-seed 是否生效、写操作是否给出正确提示、鉴权顺序、B 站上游可用性。改完部署相关代码先跑它。
-
-`check:interaction` 覆盖：站点无投稿入口 → 视频页标题/UP 主/头像/空间链接/简介/统计/播放器都来自 B 站 →
-**播放器与占位槽严丝合缝、信息条不压统计栏** → **B 站评论**（加载、来源标注、昵称/正文/头像、热门↔最新切换）→
-**页脚版权不被固定评论条遮住**（矩形相交断言）→
-**小窗播放全流程**（精确停靠 → 导航后变右下角小窗 → 同一元素存活、iframe src 未变 → 回到视频页重新停靠 → 关闭）→
-后台建分类、归类、主页出现分类区块、卡片显示分类、chip 过滤、视频页分类 chip → 清理并恢复 → 收藏与本地评论 → 非法 bvid 报错 →
-**待补齐全流程**（「只存链接」收录 → 视频页提示条 / 无 UP 主卡片 / 无 0 统计 → 主页占位封面 →
-后台 `待补齐` 标记与「补齐元数据」按钮 → 补齐接口免口令且限流 → 清理）。
-
-`check:deployed` 额外覆盖深链接（`/video/xxx`、`/search`、`/favorites` 直接刷新必须落到 SPA）——
-这正是本地测不出、只在 Vercel 上暴露的那类问题。
-
-### 本机网络的一个坑（`*.vercel.app`）
-
-这台机器的 DNS 会把 `*.vercel.app` 解析到错误的 IP（实测是 Meta 的地址段），
-所以 `curl` / Node 直连会超时，而浏览器和 .NET（`Invoke-WebRequest`）能通——因为它们走系统代理
-`127.0.0.1:7897`。脚本已经支持代理：
-
-```powershell
-$env:HTTPS_PROXY="http://127.0.0.1:7897"
-$env:HTTP_PROXY="http://127.0.0.1:7897"
-$env:NODE_USE_ENV_PROXY="1"          # 让 Node 的 fetch 走代理（Node 24+）
-$env:PROXY_SERVER="http://127.0.0.1:7897"   # 让脚本里的浏览器走代理
-npm run check:deployed -- https://your-app.vercel.app
-```
-
-可用环境变量：`BASE=` `EDGE_PATH=` `API_TARGET=`（Vite 代理目标）`ADMIN_TOKEN=`（默认从 `.env` 读取）
-`OUT=`（截图目录，默认 `shots`）`PROXY_SERVER=`。
 
 ---
 
