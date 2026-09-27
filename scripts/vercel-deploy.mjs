@@ -14,9 +14,10 @@
  * Requires `.vercel/project.json` (created by `npx vercel link`).
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative, sep } from 'node:path'
+import { basename, join, relative, sep } from 'node:path'
 
-import { config } from '../server/config.js'
+import '../server/env.js' // .env first, so M37_CONFIG is visible next
+import { config, configPath } from '../server/config.js'
 
 const ARGS = process.argv.slice(2)
 const target = ARGS.includes('--target') ? ARGS[ARGS.indexOf('--target') + 1] : 'production'
@@ -74,7 +75,18 @@ const payload = files.map((file) => ({
   data: readFileSync(join(ROOT, file)).toString('base64'),
   encoding: 'base64',
 }))
+
+// The build on Vercel (and the serverless function) reads config.json, so the
+// *effective* branding has to be uploaded even when it lives in another file
+// (M37_CONFIG=./my-config.local). Uploaded as config.json.
+const effectiveConfig = readFileSync(configPath, 'utf8')
+if (!payload.some((f) => f.file === 'config.json')) {
+  payload.push({ file: 'config.json', data: Buffer.from(effectiveConfig).toString('base64'), encoding: 'base64' })
+} else {
+  payload.find((f) => f.file === 'config.json').data = Buffer.from(effectiveConfig).toString('base64')
+}
 console.log(`上传 ${payload.length} 个文件（${(JSON.stringify(payload).length / 1024).toFixed(0)} KB）→ ${target}`)
+console.log(`品牌：${config.siteName}（来自 ${basename(configPath)}）`)
 
 const res = await fetch(`https://api.vercel.com/v13/deployments?teamId=${orgId}&forceNew=1`, {
   method: 'POST',

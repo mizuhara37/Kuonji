@@ -138,8 +138,10 @@ npm run serve               # = npm run build && node server/index.js
   `/admin` 页面在运行时从 `GET /api/config` 取名称。
 - `siteName` 省略时自动用 `brandOwner + 空格 + brandProduct`。
 - `deployUrl` 会被 `npm run sync` 当作默认线上地址（也可以改用 `LIVE_BASE` 环境变量，放在 `.env` 里）。
-- 不想把自己的名字提交进 git？把品牌写进另一个 JSON，再用 `M37_CONFIG=./my-config.json` 指过去
-  （服务端与 `npm run build` 都认这个变量）。
+- 不想把自己的名字提交进 git？把品牌写进另一个 JSON，然后在 `.env` 里加一行
+  `M37_CONFIG=./my-config.local`（`*.local` 已被 gitignore）——`npm run build` / `npm run dev`、
+  服务端、以及 `npm run deploy` 都会自动读它；部署时会把这份**生效中的配置**作为 `config.json`
+  上传，所以线上也是你自己的名字，而仓库里仍然是示例名称。
 
 ## 5. 教程：投稿一个 B 站视频
 
