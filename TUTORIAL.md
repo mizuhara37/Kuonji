@@ -1,4 +1,4 @@
-# Example VideoHub · 介绍 · 教程 · 示例
+# Kuonji VideoHub · 介绍 · 教程 · 示例
 
 > 一个用 **Material Design 3** 做的视频站：视频全部来自 **哔哩哔哩**，
 > 后台输入 **bvid** 即可投稿，画面与弹幕走 B 站官方内嵌播放器，简介 / UP 主 / 数据 / 评论都来自 B 站。
@@ -123,9 +123,9 @@ npm run serve               # = npm run build && node server/index.js
 
 ```json
 {
-  "brandOwner": "Example",
+  "brandOwner": "Kuonji",
   "brandProduct": "VideoHub",
-  "siteName": "Example VideoHub",
+  "siteName": "Kuonji VideoHub",
   "tagline": "基于 Material Design 3 构建的视频分享站点",
   "footerNote": "视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建",
   "repoUrl": "",
@@ -632,4 +632,4 @@ ADMIN_TOKEN=换成一个只有你知道的随机串
 
 ---
 
-<sub>Example · VideoHub · 基于 Material Design 3 构建 · 视频与信息来自哔哩哔哩</sub>
+<sub>Kuonji · VideoHub · 基于 Material Design 3 构建 · 视频与信息来自哔哩哔哩</sub>

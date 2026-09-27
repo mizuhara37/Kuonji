@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const DEFAULTS = {
-  brandOwner: 'Example',
+  brandOwner: 'Kuonji',
   brandProduct: 'VideoHub',
   siteName: '',
   tagline: '基于 Material Design 3 构建的视频分享站点',

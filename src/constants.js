@@ -5,9 +5,9 @@
 const injected = typeof __SITE_CONFIG__ !== 'undefined' ? __SITE_CONFIG__ : {}
 
 const FALLBACK = {
-  brandOwner: 'Example',
+  brandOwner: 'Kuonji',
   brandProduct: 'VideoHub',
-  siteName: 'Example VideoHub',
+  siteName: 'Kuonji VideoHub',
   tagline: '基于 Material Design 3 构建的视频分享站点',
   footerNote: '视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建',
   repoUrl: '',

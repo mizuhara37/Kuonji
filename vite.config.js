@@ -23,7 +23,7 @@ function resolveSiteConfig(env) {
     console.warn(`[vite] 未读到 ${configPath.pathname}，使用默认站点名`)
   }
   const merged = {
-    brandOwner: 'Example',
+    brandOwner: 'Kuonji',
     brandProduct: 'VideoHub',
     tagline: '基于 Material Design 3 构建的视频分享站点',
     footerNote: '视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建',
