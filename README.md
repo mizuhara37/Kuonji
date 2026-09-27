@@ -3,6 +3,7 @@
 > 站点名由仓库根目录的 `config.json` 配置（导航栏 / 页脚 / HTML 标题 / `/admin` 全部读它）。
 
 其实是自己用来分享视频的网站吧，用dsh写的，如果有类似的需求可以试试吧
+
 一个用 **Material Design 3** 设计的视频站点，界面结构仿照
 [KotokawaAkira/VideoStation](https://github.com/KotokawaAkira/VideoStation)，
 内容完全来自哔哩哔哩：
