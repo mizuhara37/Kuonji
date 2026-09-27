@@ -1,0 +1,19 @@
+node_modules/
+dist/
+shots/
+shots-live/
+*.local
+.DS_Store
+.vite/
+*.log
+
+# local secrets / configuration
+.env
+.vercel-token
+.vercel/
+
+# the video library is per-installation data, not source
+server/data/
+
+.vercel
+.env*

@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>投稿后台 · VideoHub</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237B5BF2'/%3E%3Cpath d='M12 9.5l11 6.5-11 6.5z' fill='%23fff'/%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --primary: #6bbf8a;
+        --primary-dark: #4a9c6d;
+        --primary-container: #c9eed8;
+        --on-primary-container: #07301b;
+        --surface: #ffffff;
+        --surface-container: #e9f3ed;
+        --surface-container-low: #eff8f2;
+        --background: #f4faf6;
+        --on-surface: #191c1a;
+        --on-surface-variant: #404943;
+        --outline: #6f7973;
+        --outline-variant: #becbc2;
+        --error: #b3261e;
+        --error-container: #f9dedc;
+        --success-container: #d7f0cc;
+        --warning-container: #ffe9b8;
+        --radius-lg: 16px;
+        --radius-xl: 28px;
+        --easing: cubic-bezier(0.2, 0, 0, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--on-surface);
+        font-family: 'Roboto', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      header.bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 24px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--outline-variant);
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
+      }
+
+      .brand-owner {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        color: var(--primary);
+      }
+
+      .brand-product {
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .badge {
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--primary-container);
+        color: var(--on-primary-container);
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .badge.muted {
+        background: var(--surface-container);
+        color: var(--on-surface-variant);
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 11px;
+      }
+
+      .bar-spacer {
+        flex: 1;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 24px 96px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 26px;
+        font-weight: 600;
+      }
+
+      .sub {
+        margin: 0 0 22px;
+        color: var(--on-surface-variant);
+        font-size: 14px;
+        line-height: 22px;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--outline-variant);
+        border-radius: var(--radius-xl);
+        padding: 22px;
+        margin-bottom: 20px;
+      }
+
+      .card h2 {
+        margin: 0 0 14px;
+        font-size: 17px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .card h2 .count {
+        font-size: 13px;
+        font-weight: 400;
+        color: var(--on-surface-variant);
+      }
+
+      label.field-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--on-surface-variant);
+        margin-bottom: 8px;
+      }
+
+      textarea,
+      input[type='text'],
+      input[type='password'],
+      select {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 14px;
+        color: var(--on-surface);
+        background: var(--surface-container-low);
+        border: 1.5px solid var(--outline-variant);
+        border-radius: var(--radius-lg);
+        outline: none;
+        font-family: inherit;
+        transition: border-color 0.2s var(--easing), background 0.2s var(--easing);
+      }
+
+      textarea {
+        min-height: 112px;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 15px;
+      }
+
+      textarea:focus,
+      input:focus,
+      select:focus {
+        border-color: var(--primary);
+        background: var(--surface);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      button {
+        font: inherit;
+        cursor: pointer;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        padding: 10px 20px;
+        background: transparent;
+        color: var(--on-surface);
+        transition: background 0.2s var(--easing), border-color 0.2s var(--easing),
+          color 0.2s var(--easing);
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      button.primary {
+        background: linear-gradient(-60deg, #8fd3aa, var(--primary-dark));
+        color: #06301b;
+        font-weight: 600;
+        padding: 11px 26px;
+      }
+
+      button.ghost {
+        border-color: var(--outline-variant);
+      }
+
+      button.ghost:hover:not(:disabled) {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+
+      button.danger {
+        color: var(--error);
+      }
+
+      button.danger:hover:not(:disabled) {
+        background: var(--error-container);
+      }
+
+      button.small {
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 10px;
+      }
+
+      button.icon {
+        padding: 4px 9px;
+        font-size: 13px;
+        border-radius: 8px;
+        border-color: var(--outline-variant);
+        line-height: 1.4;
+      }
+
+      .hint {
+        font-size: 13px;
+        color: var(--on-surface-variant);
+        line-height: 20px;
+      }
+
+      .check {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--on-surface-variant);
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .check input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--primary);
+        cursor: pointer;
+      }
+
+      .chip {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--warning-container);
+        color: #3f2c00;
+      }
+
+      .thumb.pending {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--surface-container), var(--surface-container-low));
+        color: var(--on-surface-variant);
+        font-size: 12px;
+      }
+
+      .banner {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px 16px;
+        border-radius: var(--radius-lg);
+        background: var(--surface-container);
+        color: var(--on-surface-variant);
+        font-size: 13px;
+        line-height: 20px;
+        margin-bottom: 18px;
+      }
+
+      .banner.warn {
+        background: var(--warning-container);
+        color: #3f2c00;
+      }
+
+      .banner.error {
+        background: var(--error-container);
+        color: #410e0b;
+      }
+
+      .token-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      .token-row input {
+        flex: 1;
+        min-width: 200px;
+        max-width: 340px;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+
+      #results:empty {
+        display: none;
+      }
+
+      .result-list {
+        list-style: none;
+        margin: 16px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .result {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: var(--radius-lg);
+        font-size: 14px;
+        line-height: 20px;
+      }
+
+      .result.ok {
+        background: var(--success-container);
+        color: #10380a;
+      }
+
+      .result.warn {
+        background: var(--warning-container);
+        color: #3f2c00;
+      }
+
+      .result.err {
+        background: var(--error-container);
+        color: #410e0b;
+      }
+
+      .result code,
+      code {
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 12px;
+        opacity: 0.85;
+      }
+
+      .lib-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .lib-head h2 {
+        margin: 0;
+      }
+
+      .lib-head .count {
+        font-size: 13px;
+        color: var(--on-surface-variant);
+      }
+
+      /* collections */
+      .collection-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .collection-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid var(--outline-variant);
+        border-radius: var(--radius-lg);
+        background: var(--surface-container-low);
+        flex-wrap: wrap;
+      }
+
+      .collection-item .name {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .collection-item .num {
+        font-size: 12px;
+        color: var(--on-surface-variant);
+      }
+
+      .collection-item .spacer {
+        flex: 1;
+      }
+
+      .collection-item input {
+        max-width: 240px;
+        padding: 6px 10px;
+        font-size: 13px;
+        border-radius: 10px;
+      }
+
+      /* library */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 14px;
+      }
+
+      .video {
+        display: flex;
+        gap: 14px;
+        padding: 12px;
+        border: 1px solid var(--outline-variant);
+        border-radius: var(--radius-lg);
+        background: var(--surface-container-low);
+      }
+
+      .video .thumb {
+        position: relative;
+        flex: none;
+        width: 150px;
+        aspect-ratio: 16 / 9;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--surface-container);
+      }
+
+      .video .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .video .thumb .dur {
+        position: absolute;
+        right: 6px;
+        bottom: 6px;
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.72);
+        color: #fff;
+        font-size: 11px;
+      }
+
+      .video .body {
+        min-width: 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .video .title {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 20px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .video .meta {
+        font-size: 12px;
+        color: var(--on-surface-variant);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+      }
+
+      .video .meta a:hover {
+        color: var(--primary);
+      }
+
+      .video .bvid {
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 11px;
+      }
+
+      .video .assign {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .video .assign select {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 10px;
+        max-width: 190px;
+      }
+
+      .video .assign span {
+        font-size: 12px;
+        color: var(--on-surface-variant);
+        white-space: nowrap;
+      }
+
+      .video .actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: auto;
+      }
+
+      .empty {
+        padding: 56px 16px;
+        text-align: center;
+        color: var(--on-surface-variant);
+      }
+
+      .empty .big {
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--on-surface);
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: -2px;
+        margin-right: 8px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      footer.foot {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 24px 40px;
+        font-size: 12px;
+        color: var(--on-surface-variant);
+      }
+
+      @media (max-width: 600px) {
+        main,
+        footer.foot {
+          padding-left: 14px;
+          padding-right: 14px;
+        }
+
+        .video {
+          flex-direction: column;
+        }
+
+        .video .thumb {
+          width: 100%;
+        }
+
+        header.bar {
+          padding: 10px 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <a class="brand" href="/">
+        <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#9FE0B8" />
+              <stop offset="1" stop-color="#3E8F63" />
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="9" fill="url(#g)" />
+          <path d="M12.5 9.5l10 6.5-10 6.5z" fill="#fff" />
+        </svg>
+        <span class="brand-text">
+          <span class="brand-owner" id="brand-owner">Example</span>
+          <span class="brand-product" id="brand-product">VideoHub</span>
+        </span>
+      </a>
+      <span class="badge">投稿后台</span>
+      <span class="badge muted" id="storage">存储：…</span>
+      <span class="bar-spacer"></span>
+      <button class="ghost small" id="open-site">查看站点</button>
+    </header>
+
+    <main>
+      <h1>投稿与分类</h1>
+      <p class="sub">
+        输入 B 站视频的 <b>bvid</b>（或直接粘贴视频链接）即可投稿。视频画面、简介与 UP 主信息
+        全部来自 B 站，本站只保存元数据并调用官方播放器。
+      </p>
+
+      <div id="storage-banner"></div>
+      <div id="auth-banner"></div>
+
+      <div class="banner">
+        <span>ℹ️</span>
+        <span>
+          支持一次粘贴多条：每行一个 BV 号或链接，也可以用空格 / 逗号分隔。
+          重复的 BV 号不会被重复添加，重新提交会刷新该视频的元数据（并保留它的分类）。
+        </span>
+      </div>
+
+      <div class="banner">
+        <span>🛡️</span>
+        <span>
+          B 站会对云主机（Vercel 等）的出口 IP 返回 <code>412 request was banned</code>。
+          遇到这种情况投稿<b>不会失败</b>：BV 号会先存下来，封面 / 简介 / UP 主信息在之后有人访问该视频时自动重试补齐
+          （也可以在下面点「补齐元数据」手动重试）。勾选「只存链接」可以直接跳过抓取。
+        </span>
+      </div>
+
+      <section class="card">
+        <h2>添加视频</h2>
+        <label class="field-label" for="input">BV 号 / 视频链接</label>
+        <textarea
+          id="input"
+          placeholder="BV1GJ411x7h7&#10;https://www.bilibili.com/video/BV1GJ411x7h7/&#10;av80433022"
+          spellcheck="false"
+        ></textarea>
+        <div class="row">
+          <button class="primary" id="submit">提交投稿</button>
+          <button class="ghost" id="clear">清空</button>
+          <span class="hint" id="status"></span>
+        </div>
+        <div class="row" style="margin-top: 10px">
+          <label class="check" for="defer">
+            <input type="checkbox" id="defer" />
+            <span>只存链接，暂不抓取元数据（B 站 412 / 风控时使用，之后可随时补齐）</span>
+          </label>
+        </div>
+        <ul class="result-list" id="results"></ul>
+      </section>
+
+      <section class="card">
+        <h2>分类管理 <span class="count" id="collection-count"></span></h2>
+        <p class="hint" style="margin-top: -6px">
+          分类是自定的整理方式（与 B 站分区无关）。有分类后，站点主页会按分类分区展示视频。
+        </p>
+        <div class="row">
+          <input type="text" id="collection-name" placeholder="新分类名称，例如：游戏精选" maxlength="24" />
+          <button class="primary" id="collection-add">添加分类</button>
+        </div>
+        <ul class="collection-list" id="collection-list" style="margin-top: 16px"></ul>
+      </section>
+
+      <section class="card">
+        <div class="lib-head">
+          <h2>视频库</h2>
+          <span class="count" id="count"></span>
+        </div>
+        <div class="row" style="margin-top: 0; margin-bottom: 16px">
+          <select id="filter-collection" style="max-width: 220px"></select>
+          <input type="text" id="filter-keyword" placeholder="按标题 / UP 主筛选" style="max-width: 240px" />
+        </div>
+        <div id="library"></div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span id="foot-brand">Example VideoHub</span> · 投稿后台 · 存储：<code id="datafile">…</code>
+    </footer>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      const TOKEN_KEY = 'm37_admin_token'
+
+      const state = {
+        items: [],
+        collections: [],
+        token: localStorage.getItem(TOKEN_KEY) || '',
+        authRequired: false,
+        filterCollection: '',
+        filterKeyword: '',
+        busy: false,
+      }
+
+      /* ---------------- helpers ---------------- */
+
+      function formatCount(n) {
+        const num = Number(n) || 0
+        if (num >= 100000000) return `${(num / 100000000).toFixed(1)}亿`
+        if (num >= 10000) return `${(num / 10000).toFixed(1)}万`
+        return String(num)
+      }
+
+      function formatDuration(seconds) {
+        const s = Math.max(0, Math.floor(Number(seconds) || 0))
+        const pad = (n) => String(n).padStart(2, '0')
+        const h = Math.floor(s / 3600)
+        const m = Math.floor((s % 3600) / 60)
+        if (h > 0) return `${h}:${pad(m)}:${pad(s % 60)}`
+        return `${pad(m)}:${pad(s % 60)}`
+      }
+
+      function formatDate(ts) {
+        if (!ts) return ''
+        const d = new Date(ts)
+        const pad = (n) => String(n).padStart(2, '0')
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+      }
+
+      function escapeHtml(text) {
+        return String(text ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+      }
+
+      function proxied(url) {
+        return url ? `/api/image?url=${encodeURIComponent(url)}` : ''
+      }
+
+      function setStatus(text, busy = false) {
+        $('status').innerHTML = busy
+          ? `<span class="spinner"></span>${escapeHtml(text)}`
+          : escapeHtml(text)
+      }
+
+      /** fetch wrapper that attaches the admin token to writes. */
+      async function api(path, options = {}) {
+        const headers = { ...(options.headers || {}) }
+        if (options.body) headers['Content-Type'] = 'application/json'
+        if (state.token) headers['X-Admin-Token'] = state.token
+        const res = await fetch(`/api${path}`, { ...options, headers })
+        const data = await res.json().catch(() => null)
+        if (res.status === 401) {
+          renderAuthBanner('口令错误或未填写，无法修改视频库。')
+          throw new Error('需要管理口令（ADMIN_TOKEN）')
+        }
+        // a batch submit answers 400 while still carrying per-input results —
+        // those belong in the result list, not in an exception
+        if (!res.ok && !(data && Array.isArray(data.results))) {
+          throw new Error((data && data.error) || `HTTP ${res.status}`)
+        }
+        return data || {}
+      }
+
+      /* ---------------- banners ---------------- */
+
+      /**
+       * Storage banner: shown when this deployment cannot persist writes
+       * (Vercel without KV). Kept separate from the auth banner so both can be
+       * visible at once — a read-only deployment still needs the token field
+       * for the moment KV is configured.
+       */
+      function renderStorageBanner(health) {
+        const box = $('storage-banner')
+        if (health.canWrite !== false) {
+          box.innerHTML = ''
+          return
+        }
+        box.innerHTML = `<div class="banner error">
+          <span>✖</span>
+          <span>
+            当前部署<b>不可写</b>：Vercel 的文件系统是只读的，没有外部存储时无法投稿 / 删除 / 分类。<br />
+            解决办法：在 Vercel 控制台 <b>Storage → Upstash for Redis</b> 建一个库（会自动注入
+            <code>KV_REST_API_URL</code> / <code>KV_REST_API_TOKEN</code>），然后重新部署一次即可，代码不用改。
+          </span>
+        </div>`
+      }
+
+      function renderAuthBanner(errorText = '') {
+        const box = $('auth-banner')
+        if (!state.authRequired) {
+          box.innerHTML = `<div class="banner warn">
+            <span>⚠️</span>
+            <span>当前服务器未设置 <code>ADMIN_TOKEN</code>，任何能访问这个页面的人都可以增删视频。
+            部署到公网（例如 Vercel）前请务必设置：<code>ADMIN_TOKEN=你的口令</code>。</span>
+          </div>`
+          return
+        }
+        box.innerHTML = `<div class="banner ${errorText ? 'error' : ''}">
+          <span>🔒</span>
+          <span>
+            该服务器启用了 <code>ADMIN_TOKEN</code>，修改操作需要口令。
+            ${errorText ? `<b>${escapeHtml(errorText)}</b>` : '口令只保存在本机浏览器中。'}
+            <div class="token-row">
+              <input type="password" id="token-input" placeholder="输入管理口令" value="${escapeHtml(
+                state.token,
+              )}" />
+              <button class="ghost small" id="token-save">保存口令</button>
+              <button class="ghost small" id="token-clear">清除</button>
+            </div>
+          </span>
+        </div>`
+        $('token-save').addEventListener('click', () => {
+          state.token = $('token-input').value.trim()
+          localStorage.setItem(TOKEN_KEY, state.token)
+          renderAuthBanner()
+          setStatus('口令已保存')
+        })
+        $('token-clear').addEventListener('click', () => {
+          state.token = ''
+          localStorage.removeItem(TOKEN_KEY)
+          renderAuthBanner()
+        })
+      }
+
+      /* ---------------- results ---------------- */
+
+      function renderResults(results) {
+        $('results').innerHTML = results
+          .map((r) => {
+            if (r.ok && r.deferred) {
+              const pending = r.pending !== false
+              return `<li class="result warn"><span>⏳</span>
+                <span><b>${pending ? '已收录（元数据待补齐）' : '已收录'}</b> ·
+                <code>${escapeHtml(r.item.bvid)}</code>
+                ${
+                  pending
+                    ? `<br /><span class="hint">${
+                        r.pending === true && !r.warning
+                          ? '按「只存链接」提交：封面 / 简介 / UP 主会在有人访问该视频时自动补齐。'
+                          : `本次没能取到元数据：${escapeHtml(r.warning || r.item.metadataError || '')}`
+                      }</span>`
+                    : ''
+                }</span></li>`
+            }
+            if (r.ok) {
+              const cls = r.created ? 'ok' : 'warn'
+              const label = r.created ? '已添加' : '已刷新'
+              return `<li class="result ${cls}"><span>${r.created ? '✔' : '↻'}</span>
+                <span><b>${label}</b> · ${escapeHtml(r.item.title)}
+                <code>${escapeHtml(r.item.bvid)}</code> · UP：${escapeHtml(r.item.owner.name)}</span></li>`
+            }
+            return `<li class="result err"><span>✘</span>
+              <span><b>失败</b> · <code>${escapeHtml(r.input)}</code> — ${escapeHtml(r.error)}</span></li>`
+          })
+          .join('')
+      }
+
+      /* ---------------- collections ---------------- */
+
+      function renderCollections() {
+        $('collection-count').textContent = state.collections.length
+          ? `共 ${state.collections.length} 个`
+          : '（暂无，主页将按 B 站分区展示）'
+
+        if (!state.collections.length) {
+          $('collection-list').innerHTML = ''
+          return
+        }
+
+        $('collection-list').innerHTML = state.collections
+          .map(
+            (c, index) => `
+          <li class="collection-item" data-id="${escapeHtml(c.id)}">
+            <span class="name">${escapeHtml(c.name)}</span>
+            <span class="num">${c.count} 个视频</span>
+            <span class="spacer"></span>
+            <button class="icon" data-act="up" ${index === 0 ? 'disabled' : ''} title="上移">↑</button>
+            <button class="icon" data-act="down" ${
+              index === state.collections.length - 1 ? 'disabled' : ''
+            } title="下移">↓</button>
+            <button class="icon" data-act="rename">重命名</button>
+            <button class="icon danger" data-act="delete">删除</button>
+          </li>`,
+          )
+          .join('')
+      }
+
+      function renderCollectionOptions() {
+        const options = state.collections
+          .map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`)
+          .join('')
+        $('filter-collection').innerHTML =
+          `<option value="">全部分类</option><option value="uncategorized">未分类</option>${options}`
+
+        document.querySelectorAll('.video .assign select').forEach((select) => {
+          const current = select.dataset.current || ''
+          select.innerHTML =
+            `<option value="">未分类</option>${options}`
+          select.value = current
+        })
+      }
+
+      async function addCollection() {
+        const name = $('collection-name').value.trim()
+        if (!name) return
+        try {
+          await api('/collections', { method: 'POST', body: JSON.stringify({ name }) })
+          $('collection-name').value = ''
+          setStatus(`已创建分类「${name}」`)
+          await loadCollections()
+          renderLibrary()
+        } catch (err) {
+          setStatus(`创建失败：${err.message}`)
+        }
+      }
+
+      async function reloadCollections() {
+        const data = await api('/collections')
+        state.collections = data.items || []
+      }
+
+      async function loadCollections() {
+        await reloadCollections()
+        renderCollections()
+        renderCollectionOptions()
+      }
+
+      /* ---------------- library ---------------- */
+
+      function visibleItems() {
+        return state.items.filter((v) => {
+          if (state.filterCollection === 'uncategorized' && v.collectionId) return false
+          if (
+            state.filterCollection &&
+            state.filterCollection !== 'uncategorized' &&
+            v.collectionId !== state.filterCollection
+          ) {
+            return false
+          }
+          if (state.filterKeyword) {
+            const hay = `${v.title} ${v.owner.name} ${v.bvid}`.toLowerCase()
+            if (!hay.includes(state.filterKeyword.toLowerCase())) return false
+          }
+          return true
+        })
+      }
+
+      function renderLibrary() {
+        const items = visibleItems()
+        $('count').textContent = state.items.length
+          ? `共 ${state.items.length} 个视频${items.length !== state.items.length ? `，筛选出 ${items.length} 个` : ''}`
+          : ''
+
+        if (!state.items.length) {
+          $('library').innerHTML = `<div class="empty">
+            <div class="big">视频库还是空的</div>
+            <div>在上面的输入框里粘贴一个 BV 号，提交后视频就会出现在这里，也会同步到站点首页。</div>
+          </div>`
+          return
+        }
+        if (!items.length) {
+          $('library').innerHTML = `<div class="empty"><div class="big">没有符合条件的视频</div>
+            <div>换一个筛选条件试试。</div></div>`
+          return
+        }
+
+        $('library').innerHTML = `<div class="grid">${items
+          .map(
+            (v) => `
+          <article class="video" data-bvid="${escapeHtml(v.bvid)}">
+            ${
+              v.cover
+                ? `<div class="thumb">
+                    <img src="${proxied(v.cover)}" alt="" loading="lazy" />
+                    <span class="dur">${formatDuration(v.duration)}</span>
+                  </div>`
+                : `<div class="thumb pending" title="元数据待补齐">封面临时缺省</div>`
+            }
+            <div class="body">
+              <div class="title" title="${escapeHtml(v.title)}">${escapeHtml(v.title)}
+                ${v.metadataState === 'pending' ? '<span class="chip">待补齐</span>' : ''}
+              </div>
+              <div class="meta">
+                ${
+                  v.owner.mid
+                    ? `<a href="https://space.bilibili.com/${v.owner.mid}" target="_blank" rel="noreferrer">UP：${escapeHtml(
+                        v.owner.name,
+                      )}</a>`
+                    : '<span>UP 主待补齐</span>'
+                }
+                <span>${escapeHtml(v.categoryParent)}${v.category !== v.categoryParent ? ' · ' + escapeHtml(v.category) : ''}</span>
+                ${v.partCount > 1 ? `<span>${v.partCount} 个分 P</span>` : ''}
+              </div>
+              <div class="meta">
+                <span>▶ ${formatCount(v.stat.view)}</span>
+                <span>💬 ${formatCount(v.stat.danmaku)}</span>
+                <span>👍 ${formatCount(v.stat.like)}</span>
+                <span>⭐ ${formatCount(v.stat.favorite)}</span>
+              </div>
+              ${
+                v.metadataState === 'pending' && v.metadataError
+                  ? `<div class="meta"><span class="hint">上次补齐失败：${escapeHtml(
+                      v.metadataError,
+                    )}</span></div>`
+                  : ''
+              }
+              <div class="meta">
+                <span class="bvid">${escapeHtml(v.bvid)}</span>
+                <span>加入于 ${formatDate(v.addedAt)}</span>
+              </div>
+              <div class="assign">
+                <span>分类</span>
+                <select data-act="assign" data-current="${escapeHtml(v.collectionId || '')}"></select>
+              </div>
+              <div class="actions">
+                ${
+                  v.metadataState === 'pending'
+                    ? '<button class="small ghost" data-act="hydrate">补齐元数据</button>'
+                    : ''
+                }
+                <button class="small ghost" data-act="refresh">刷新元数据</button>
+                <button class="small ghost" data-act="site">站点预览</button>
+                <button class="small ghost" data-act="bili">在 B 站打开</button>
+                <button class="small danger" data-act="delete">删除</button>
+              </div>
+            </div>
+          </article>`,
+          )
+          .join('')}</div>`
+
+        renderCollectionOptions()
+      }
+
+      async function loadLibrary() {
+        try {
+          const data = await api('/videos')
+          state.items = data.items || []
+          renderLibrary()
+        } catch (err) {
+          $('library').innerHTML = `<div class="empty"><div class="big">无法读取视频库</div><div>${escapeHtml(
+            err.message,
+          )}</div></div>`
+        }
+      }
+
+      /* ---------------- actions ---------------- */
+
+      async function submit() {
+        const input = $('input').value.trim()
+        if (!input || state.busy) return
+        state.busy = true
+        $('submit').disabled = true
+        const defer = $('defer').checked
+        setStatus(defer ? '正在保存 bvid（跳过元数据抓取）…' : '正在从 B 站获取元数据…', true)
+
+        try {
+          const data = await api('/videos', {
+            method: 'POST',
+            body: JSON.stringify({ input, deferMetadata: defer }),
+          })
+          if (data.error && !data.results) {
+            $('results').innerHTML = `<li class="result err"><span>✘</span><span>${escapeHtml(
+              data.error,
+            )}</span></li>`
+            setStatus('')
+          } else {
+            renderResults(data.results || [])
+            setStatus(
+              `完成：新增 ${data.added}，刷新 ${data.refreshed}${
+                data.deferred ? `，待补齐 ${data.deferred}` : ''
+              }，失败 ${data.failed}`,
+            )
+            if (data.added || data.refreshed) $('input').value = ''
+            await loadLibrary()
+            await loadCollections()
+          }
+        } catch (err) {
+          setStatus(`请求失败：${err.message}`)
+        } finally {
+          state.busy = false
+          $('submit').disabled = false
+        }
+      }
+
+      $('submit').addEventListener('click', submit)
+      $('clear').addEventListener('click', () => {
+        $('input').value = ''
+        $('results').innerHTML = ''
+        setStatus('')
+      })
+      $('input').addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submit()
+      })
+      $('open-site').addEventListener('click', () => window.open('/', '_blank'))
+
+      $('collection-add').addEventListener('click', addCollection)
+      $('collection-name').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addCollection()
+      })
+
+      $('filter-collection').addEventListener('change', (e) => {
+        state.filterCollection = e.target.value
+        renderLibrary()
+      })
+      $('filter-keyword').addEventListener('input', (e) => {
+        state.filterKeyword = e.target.value.trim()
+        renderLibrary()
+      })
+
+      $('collection-list').addEventListener('click', async (event) => {
+        const button = event.target.closest('button[data-act]')
+        if (!button) return
+        const item = button.closest('.collection-item')
+        const id = item?.dataset.id
+        if (!id) return
+        const collection = state.collections.find((c) => c.id === id)
+        const act = button.dataset.act
+
+        if (act === 'rename') {
+          const name = window.prompt('新的分类名称', collection ? collection.name : '')
+          if (name === null) return
+          try {
+            await api(`/collections/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) })
+            setStatus('分类已重命名')
+            await loadCollections()
+            await loadLibrary()
+          } catch (err) {
+            setStatus(`重命名失败：${err.message}`)
+          }
+          return
+        }
+
+        if (act === 'delete') {
+          const label = collection ? collection.name : id
+          if (
+            !window.confirm(
+              `确定删除分类「${label}」吗？分类下的视频不会被删除，只会变成「未分类」。`,
+            )
+          ) {
+            return
+          }
+          try {
+            await api(`/collections/${id}`, { method: 'DELETE' })
+            setStatus('分类已删除')
+            await loadCollections()
+            await loadLibrary()
+          } catch (err) {
+            setStatus(`删除失败：${err.message}`)
+          }
+          return
+        }
+
+        if (act === 'up' || act === 'down') {
+          const ids = state.collections.map((c) => c.id)
+          const index = ids.indexOf(id)
+          const target = act === 'up' ? index - 1 : index + 1
+          if (target < 0 || target >= ids.length) return
+          ;[ids[index], ids[target]] = [ids[target], ids[index]]
+          try {
+            await api('/collections/reorder', {
+              method: 'POST',
+              body: JSON.stringify({ ids }),
+            })
+            await loadCollections()
+          } catch (err) {
+            setStatus(`排序失败：${err.message}`)
+          }
+        }
+      })
+
+      $('library').addEventListener('click', async (event) => {
+        const button = event.target.closest('button[data-act]')
+        if (!button) return
+        const card = button.closest('.video')
+        const bvid = card?.dataset.bvid
+        if (!bvid) return
+        const act = button.dataset.act
+
+        if (act === 'bili') {
+          window.open(`https://www.bilibili.com/video/${bvid}`, '_blank')
+          return
+        }
+        if (act === 'site') {
+          window.open(`/video/${bvid}`, '_blank')
+          return
+        }
+        if (act === 'refresh') {
+          button.disabled = true
+          button.textContent = '刷新中…'
+          try {
+            await api(`/videos/${bvid}/refresh`, { method: 'POST' })
+            setStatus('元数据已刷新')
+          } catch (err) {
+            setStatus(`刷新失败：${err.message}`)
+          }
+          await loadLibrary()
+          return
+        }
+        if (act === 'hydrate') {
+          button.disabled = true
+          button.textContent = '补齐中…'
+          try {
+            const res = await api(`/videos/${bvid}/hydrate`, { method: 'POST' })
+            if (res.hydrated) setStatus('已补齐封面与简介')
+            else if (res.throttled) setStatus('刚刚已经尝试过，请过 20 秒再试')
+            else setStatus(`补齐失败：${res.error || 'B 站没有放行'}`)
+          } catch (err) {
+            setStatus(`补齐失败：${err.message}`)
+          }
+          await loadLibrary()
+          return
+        }
+        if (act === 'delete') {
+          const item = state.items.find((v) => v.bvid === bvid)
+          if (!window.confirm(`确定从视频库移除「${item ? item.title : bvid}」吗？`)) return
+          try {
+            await api(`/videos/${bvid}`, { method: 'DELETE' })
+            setStatus('已移除')
+          } catch (err) {
+            setStatus(`删除失败：${err.message}`)
+          }
+          await loadLibrary()
+          await loadCollections()
+        }
+      })
+
+      $('library').addEventListener('change', async (event) => {
+        const select = event.target.closest('select[data-act="assign"]')
+        if (!select) return
+        const card = select.closest('.video')
+        const bvid = card?.dataset.bvid
+        if (!bvid) return
+        try {
+          await api(`/videos/${bvid}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ collectionId: select.value }),
+          })
+          const name = state.collections.find((c) => c.id === select.value)?.name || '未分类'
+          setStatus(`已移动到「${name}」`)
+          await loadCollections()
+          await loadLibrary()
+        } catch (err) {
+          setStatus(`移动失败：${err.message}`)
+        }
+      })
+
+      /* ---------------- branding（来自 config.json，见 /api/config） ---------------- */
+
+      async function applyBranding() {
+        try {
+          const res = await fetch('/api/config')
+          const data = await res.json()
+          const item = data && data.item
+          if (!item) return
+          if (item.brandOwner) $('brand-owner').textContent = item.brandOwner
+          if (item.brandProduct) $('brand-product').textContent = item.brandProduct
+          if (item.siteName) {
+            $('foot-brand').textContent = item.siteName
+            document.title = `投稿后台 · ${item.siteName}`
+          }
+        } catch (err) {
+          /* 静态打开（file://）或接口不可用时保持默认名称 */
+        }
+      }
+
+      /* ---------------- boot ---------------- */
+
+      ;(async () => {
+        await applyBranding()
+        try {
+          const health = await api('/health')
+          state.authRequired = Boolean(health.authRequired)
+          $('storage').textContent = `存储：${health.storage || '未知'}`
+          $('datafile').textContent = health.storage || ''
+          renderStorageBanner(health)
+          renderAuthBanner()
+          if (!health.hasBuild) {
+            setStatus('提示：前端尚未构建，站点页面需要先运行 npm run build')
+          }
+        } catch (err) {
+          renderAuthBanner()
+        }
+        await loadCollections()
+        await loadLibrary()
+      })()
+    </script>
+  </body>
+</html>

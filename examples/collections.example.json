@@ -1,0 +1,12 @@
+[
+  {
+    "id": "col-music",
+    "name": "音乐",
+    "order": 0
+  },
+  {
+    "id": "col-demo",
+    "name": "示例分类",
+    "order": 1
+  }
+]

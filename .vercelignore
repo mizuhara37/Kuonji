@@ -1,0 +1,16 @@
+# 不要上传到 Vercel 的内容
+# （node_modules 与 dist 由 Vercel 自己处理）
+
+# 自动化测试的截图与本地脚本产物
+shots/
+shots-live/
+
+# 本地实时数据库：线上内容来自 server/seed.js，避免把本机数据覆盖上去
+server/data/
+
+# 本地密钥：口令与 KV 凭据必须通过 Vercel 环境变量配置
+.env
+.vercel-token
+
+*.log
+*.tmp

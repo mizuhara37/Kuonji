@@ -1,0 +1,10 @@
+{
+  "$comment": "站点品牌配置：改这里就够了（前端需重新 npm run build / 重新部署；服务端下次启动生效）。也可以用 M37_CONFIG=/path/to/other.json 指向另一份配置。",
+  "brandOwner": "Example",
+  "brandProduct": "VideoHub",
+  "siteName": "Example VideoHub",
+  "tagline": "基于 Material Design 3 构建的视频分享站点",
+  "footerNote": "版权所有 · 视频与信息来自哔哩哔哩 · 基于 Material Design 3 构建",
+  "repoUrl": "",
+  "deployUrl": ""
+}
